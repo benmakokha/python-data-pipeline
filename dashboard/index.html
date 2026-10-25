@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scraped Data Analytics Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col custom-scrollbar">
+
+  <!-- Header / Navigation -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="p-2 bg-indigo-600 rounded-lg text-white">
+          <i class="fa-solid fa-database text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-white leading-tight">PipelineDB Explorer</h1>
+          <p class="text-xs text-slate-400">Target: <span class="text-indigo-400 font-mono">books.toscrape.com</span></p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-4">
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
+          Pipeline Active
+        </span>
+        <button id="refreshBtn" onclick="loadSampleData()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-md transition border border-slate-700 flex items-center space-x-1">
+          <i class="fa-solid fa-rotate text-xs"></i>
+          <span>Refresh</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Overview Stats Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Ingested</p>
+          <p id="statTotal" class="text-2xl font-bold text-white mt-1">0</p>
+        </div>
+        <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl">
+          <i class="fa-solid fa-boxes-stacked text-xl"></i>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Avg Price</p>
+          <p id="statAvgPrice" class="text-2xl font-bold text-white mt-1">£0.00</p>
+        </div>
+        <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl">
+          <i class="fa-solid fa-sterling-sign text-xl"></i>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Most Expensive</p>
+          <p id="statMaxPrice" class="text-2xl font-bold text-white mt-1">£0.00</p>
+        </div>
+        <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl">
+          <i class="fa-solid fa-tag text-xl"></i>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Unique URLs</p>
+          <p id="statUniqueUrls" class="text-2xl font-bold text-white mt-1">0</p>
+        </div>
+        <div class="p-3 bg-purple-500/10 text-purple-400 rounded-xl">
+          <i class="fa-solid fa-link text-xl"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-semibold text-white flex items-center space-x-2">
+            <i class="fa-solid fa-chart-column text-indigo-400"></i>
+            <span>Price Distribution across Scraped Items</span>
+          </h2>
+          <span class="text-xs text-slate-400">GBP (£)</span>
+        </div>
+        <div class="h-64">
+          <canvas id="priceChart"></canvas>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-semibold text-white flex items-center space-x-2">
+            <i class="fa-solid fa-pie-chart text-emerald-400"></i>
+            <span>Sources Breakdown</span>
+          </h2>
+        </div>
+        <div class="h-64 flex items-center justify-center">
+          <canvas id="sourceChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Exploration & Filter Section -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800">
+        <div class="flex items-center space-x-3">
+          <h2 class="text-base font-semibold text-white">Scraped Items Registry</h2>
+          <span id="filteredCount" class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">0 items</span>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- Search input -->
+          <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+            <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Search title or URL..." class="bg-slate-950 border border-slate-700 text-xs rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-indigo-500 text-slate-200 placeholder-slate-500 w-48 sm:w-64">
+          </div>
+
+          <!-- View Switcher -->
+          <div class="flex border border-slate-700 rounded-lg overflow-hidden bg-slate-950 p-0.5">
+            <button id="viewGridBtn" onclick="switchView('grid')" class="px-2.5 py-1 text-xs rounded text-slate-400 hover:text-white transition">
+              <i class="fa-solid fa-grip"></i>
+            </button>
+            <button id="viewTableBtn" onclick="switchView('table')" class="px-2.5 py-1 text-xs rounded text-slate-400 hover:text-white transition active">
+              <i class="fa-solid fa-list"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table View -->
+      <div id="tableView" class="overflow-x-auto custom-scrollbar">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 bg-slate-950/50 uppercase font-mono tracking-wider">
+              <th class="py-3 px-4 font-semibold">ID</th>
+              <th class="py-3 px-4 font-semibold">Title</th>
+              <th class="py-3 px-4 font-semibold">Source</th>
+              <th class="py-3 px-4 font-semibold">Price / Value</th>
+              <th class="py-3 px-4 font-semibold">Created At</th>
+              <th class="py-3 px-4 font-semibold text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-slate-800/60 text-slate-300">
+            <!-- Rows dynamically rendered -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Grid View -->
+      <div id="gridView" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Cards dynamically rendered -->
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Sample dataset generated from the output logs provided in the prompt
+    const initialScrapedData = [
+      { id: 1, title: "A Light in the Attic", company_or_source: "BooksToScrape", location: "£51.77", url: "http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html", description: "Price: £51.77", created_at: "2026-10-25 11:24:19" },
+      { id: 2, title: "Tipping the Velvet", company_or_source: "BooksToScrape", location: "£53.74", url: "http://books.toscrape.com/catalogue/tipping-the-velvet_999/index.html", description: "Price: £53.74", created_at: "2026-10-25 11:24:19" },
+      { id: 3, title: "Soumission", company_or_source: "BooksToScrape", location: "£50.10", url: "http://books.toscrape.com/catalogue/soumission_998/index.html", description: "Price: £50.10", created_at: "2026-10-25 11:24:19" },
+      { id: 4, title: "Sharp Objects", company_or_source: "BooksToScrape", location: "£47.82", url: "http://books.toscrape.com/catalogue/sharp-objects_997/index.html", description: "Price: £47.82", created_at: "2026-10-25 11:24:19" },
+      { id: 5, title: "Sapiens: A Brief History of Humankind", company_or_source: "BooksToScrape", location: "£54.23", url: "http://books.toscrape.com/catalogue/sapiens-a-brief-history-of-humankind_996/index.html", description: "Price: £54.23", created_at: "2026-10-25 11:24:19" },
+      { id: 6, title: "The Requiem Red", company_or_source: "BooksToScrape", location: "£22.65", url: "http://books.toscrape.com/catalogue/the-requiem-red_995/index.html", description: "Price: £22.65", created_at: "2026-10-25 11:24:19" },
+      { id: 7, title: "The Dirty Little Secrets of Getting Your Dream Job", company_or_source: "BooksToScrape", location: "£33.34", url: "http://books.toscrape.com/catalogue/the-dirty-little-secrets-of-getting-your-dream-job_994/index.html", description: "Price: £33.34", created_at: "2026-10-25 11:24:19" },
+      { id: 8, title: "The Coming Woman", company_or_source: "BooksToScrape", location: "£17.93", url: "http://books.toscrape.com/catalogue/the-coming-woman-a-novel-based-on-the-life-of-the-infamous-feminist-victoria-woodhull_993/index.html", description: "Price: £17.93", created_at: "2026-10-25 11:24:19" },
+      { id: 9, title: "The Boys in the Boat", company_or_source: "BooksToScrape", location: "£22.60", url: "http://books.toscrape.com/catalogue/the-boys-in-the-boat-nine-americans-and-their-epic-quest-for-gold-at-the-1936-berlin-olympics_992/index.html", description: "Price: £22.60", created_at: "2026-10-25 11:24:19" },
+      { id: 10, title: "The Black Maria", company_or_source: "BooksToScrape", location: "£52.15", url: "http://books.toscrape.com/catalogue/the-black-maria_991/index.html", description: "Price: £52.15", created_at: "2026-10-25 11:24:19" },
+      { id: 11, title: "Starving Hearts (Triangular Trade Trilogy #1)", company_or_source: "BooksToScrape", location: "£13.99", url: "http://books.toscrape.com/catalogue/starving-hearts-triangular-trade-trilogy-1_990/index.html", description: "Price: £13.99", created_at: "2026-10-25 11:24:19" },
+      { id: 12, title: "Shakespeare's Sonnets", company_or_source: "BooksToScrape", location: "£20.66", url: "http://books.toscrape.com/catalogue/shakespeares-sonnets_989/index.html", description: "Price: £20.66", created_at: "2026-10-25 11:24:19" },
+      { id: 13, title: "Set Me Free", company_or_source: "BooksToScrape", location: "£17.46", url: "http://books.toscrape.com/catalogue/set-me-free_988/index.html", description: "Price: £17.46", created_at: "2026-10-25 11:24:19" },
+      { id: 14, title: "Scott Pilgrim's Precious Little Life (Scott Pilgrim #1)", company_or_source: "BooksToScrape", location: "£52.29", url: "http://books.toscrape.com/catalogue/scott-pilgrims-precious-little-life-scott-pilgrim-1_987/index.html", description: "Price: £52.29", created_at: "2026-10-25 11:24:19" },
+      { id: 15, title: "Rip It Up and Start Again", company_or_source: "BooksToScrape", location: "£35.02", url: "http://books.toscrape.com/catalogue/rip-it-up-and-start-again_986/index.html", description: "Price: £35.02", created_at: "2026-10-25 11:24:19" },
+      { id: 16, title: "Our Band Could Be Your Life", company_or_source: "BooksToScrape", location: "£57.25", url: "http://books.toscrape.com/catalogue/our-band-could-be-your-life-scenes-from-the-american-indie-underground-1981-1991_985/index.html", description: "Price: £57.25", created_at: "2026-10-25 11:24:19" },
+      { id: 17, title: "Olio", company_or_source: "BooksToScrape", location: "£23.88", url: "http://books.toscrape.com/catalogue/olio_984/index.html", description: "Price: £23.88", created_at: "2026-10-25 11:24:19" },
+      { id: 18, title: "Mesaerion: The Best Science Fiction Stories", company_or_source: "BooksToScrape", location: "£37.59", url: "http://books.toscrape.com/catalogue/mesaerion-the-best-science-fiction-stories-1800-1849_983/index.html", description: "Price: £37.59", created_at: "2026-10-25 11:24:19" },
+      { id: 19, title: "Libertarianism for Beginners", company_or_source: "BooksToScrape", location: "£51.33", url: "http://books.toscrape.com/catalogue/libertarianism-for-beginners_982/index.html", description: "Price: £51.33", created_at: "2026-10-25 11:24:19" },
+      { id: 20, title: "It's Only the Himalayas", company_or_source: "BooksToScrape", location: "£45.17", url: "http://books.toscrape.com/catalogue/its-only-the-himalayas_981/index.html", description: "Price: £45.17", created_at: "2026-10-25 11:24:19" }
+    ];
+
+    let currentData = [...initialScrapedData];
+    let priceChartInstance = null;
+    let sourceChartInstance = null;
+    let currentView = 'table';
+
+    function parseNumericPrice(str) {
+      if (!str) return 0;
+      const clean = str.replace(/[^0-9.]/g, '');
+      return parseFloat(clean) || 0;
+    }
+
+    function updateStats(data) {
+      document.getElementById('statTotal').innerText = data.length;
+      
+      const prices = data.map(d => parseNumericPrice(d.location));
+      const avg = prices.length ? (prices.reduce((a, b) => a + b, 0) / prices.length).toFixed(2) : '0.00';
+      const max = prices.length ? Math.max(...prices).toFixed(2) : '0.00';
+      const uniqueUrls = new Set(data.map(d => d.url)).size;
+
+      document.getElementById('statAvgPrice').innerText = `£${avg}`;
+      document.getElementById('statMaxPrice').innerText = `£${max}`;
+      document.getElementById('statUniqueUrls').innerText = uniqueUrls;
+    }
+
+    function initCharts(data) {
+      // Price Distribution Chart
+      const priceCtx = document.getElementById('priceChart').getContext('2d');
+      const labels = data.map(d => d.title.length > 15 ? d.title.substring(0, 15) + '...' : d.title);
+      const prices = data.map(d => parseNumericPrice(d.location));
+
+      if (priceChartInstance) priceChartInstance.destroy();
+
+      priceChartInstance = new Chart(priceCtx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Price (£)',
+            data: prices,
+            backgroundColor: 'rgba(99, 102, 241, 0.6)',
+            borderColor: 'rgba(99, 102, 241, 1)',
+            borderWidth: 1,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { display: false } },
+            y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#334155' } }
+          }
+        }
+      });
+
+      // Source Breakdown Chart
+      const sourceCtx = document.getElementById('sourceChart').getContext('2d');
+      const sourceCounts = {};
+      data.forEach(d => {
+        sourceCounts[d.company_or_source] = (sourceCounts[d.company_or_source] || 0) + 1;
+      });
+
+      if (sourceChartInstance) sourceChartInstance.destroy();
+
+      sourceChartInstance = new Chart(sourceCtx, {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(sourceCounts),
+          datasets: [{
+            data: Object.values(sourceCounts),
+            backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ec4899'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    function renderTable(data) {
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500">No scraped records found.</td></tr>`;
+        return;
+      }
+
+      data.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition border-b border-slate-800/40";
+        tr.innerHTML = `
+          <td class="py-3 px-4 font-mono text-indigo-400">#${item.id}</td>
+          <td class="py-3 px-4 font-medium text-slate-100">${item.title}</td>
+          <td class="py-3 px-4">
+            <span class="px-2 py-0.5 text-xs rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">${item.company_or_source}</span>
+          </td>
+          <td class="py-3 px-4 font-mono text-emerald-400 font-semibold">${item.location}</td>
+          <td class="py-3 px-4 text-slate-400 text-xs">${item.created_at}</td>
+          <td class="py-3 px-4 text-right">
+            <a href="${item.url}" target="_blank" class="inline-flex items-center space-x-1 text-slate-400 hover:text-indigo-400 transition">
+              <span>Visit</span>
+              <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+            </a>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderGrid(data) {
+      const grid = document.getElementById('gridView');
+      grid.innerHTML = '';
+
+      if (data.length === 0) {
+        grid.innerHTML = `<div class="col-span-full text-center py-8 text-slate-500">No scraped records found.</div>`;
+        return;
+      }
+
+      data.forEach(item => {
+        const card = document.createElement('div');
+        card.className = "bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 transition space-y-3";
+        card.innerHTML = `
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-indigo-400">#${item.id}</span>
+              <span class="px-2 py-0.5 text-[10px] rounded bg-slate-800 text-slate-400">${item.company_or_source}</span>
+            </div>
+            <h3 class="font-semibold text-slate-100 text-sm line-clamp-2">${item.title}</h3>
+            <p class="text-xs text-slate-400">${item.description}</p>
+          </div>
+          <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+            <span class="text-emerald-400 font-mono font-bold text-sm">${item.location}</span>
+            <a href="${item.url}" target="_blank" class="text-xs text-slate-400 hover:text-indigo-400 transition flex items-center space-x-1">
+              <span>Source</span>
+              <i class="fa-solid fa-external-link text-[10px]"></i>
+            </a>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function applyFilters() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = currentData.filter(d => 
+        d.title.toLowerCase().includes(query) || 
+        d.url.toLowerCase().includes(query) ||
+        d.company_or_source.toLowerCase().includes(query)
+      );
+
+      document.getElementById('filteredCount').innerText = `${filtered.length} items`;
+      renderTable(filtered);
+      renderGrid(filtered);
+    }
+
+    function switchView(view) {
+      currentView = view;
+      const tableView = document.getElementById('tableView');
+      const gridView = document.getElementById('gridView');
+      const btnTable = document.getElementById('viewTableBtn');
+      const btnGrid = document.getElementById('viewGridBtn');
+
+      if (view === 'table') {
+        tableView.classList.remove('hidden');
+        gridView.classList.add('hidden');
+        btnTable.classList.add('bg-slate-800', 'text-white');
+        btnGrid.classList.remove('bg-slate-800', 'text-white');
+      } else {
+        tableView.classList.add('hidden');
+        gridView.classList.remove('hidden');
+        btnGrid.classList.add('bg-slate-800', 'text-white');
+        btnTable.classList.remove('bg-slate-800', 'text-white');
+      }
+    }
+
+    function loadSampleData() {
+      currentData = [...initialScrapedData];
+      updateStats(currentData);
+      initCharts(currentData);
+      applyFilters();
+    }
+
+    // Initialize Dashboard
+    window.addEventListener('DOMContentLoaded', () => {
+      switchView('table');
+      loadSampleData();
+    });
+  </script>
+</body>
+</html>
