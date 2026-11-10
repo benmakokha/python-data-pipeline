@@ -1,4 +1,8 @@
 @import "tailwindcss";
+
+body {
+  @apply bg-slate-950 text-slate-100 font-sans antialiased;
+}
 :root {
   --text: #6b6375;
   --text-h: #08060d;
